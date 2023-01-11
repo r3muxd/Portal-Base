@@ -731,7 +731,7 @@ void UTIL_Portal_TraceRay( const CProp_Portal *pPortal, const Ray_t &ray, unsign
 	const CPortalSimulator &portalSimulator = pPortal->m_PortalSimulator;
 	CPortalSimulator *pLinkedPortalSimulator = portalSimulator.GetLinkedPortalSimulator();
 
-	//bool bTraceDisplacements = sv_portal_trace_vs_displacements.GetBool();
+	bool bTraceDisplacements = sv_portal_trace_vs_displacements.GetBool();
 	bool bTraceStaticProps = sv_portal_trace_vs_staticprops.GetBool();
 	if( sv_portal_trace_vs_holywall.GetBool() == false )
 		bTraceHolyWall = false;
@@ -750,6 +750,12 @@ void UTIL_Portal_TraceRay( const CProp_Portal *pPortal, const Ray_t &ray, unsign
 		if( portalSimulator.m_DataAccess.Simulation.Static.World.Brushes.pCollideable && sv_portal_trace_vs_world.GetBool() )
 		{
 			physcollision->TraceBox( ray, portalSimulator.m_DataAccess.Simulation.Static.World.Brushes.pCollideable, vec3_origin, vec3_angle, pTrace );
+			bCopyBackBrushTraceData = true;
+		}
+
+		if (portalSimulator.m_DataAccess.Simulation.Static.World.Displacements.pCollideable && bTraceDisplacements)
+		{
+			physcollision->TraceBox(ray, portalSimulator.m_DataAccess.Simulation.Static.World.Displacements.pCollideable, vec3_origin, vec3_angle, pTrace);
 			bCopyBackBrushTraceData = true;
 		}
 
@@ -781,6 +787,16 @@ void UTIL_Portal_TraceRay( const CProp_Portal *pPortal, const Ray_t &ray, unsign
 			{
 				physcollision->TraceBox( ray, pLinkedPortalSimulator->m_DataAccess.Simulation.Static.World.Brushes.pCollideable, portalSimulator.m_DataAccess.Placement.ptaap_LinkedToThis.ptOriginTransform, portalSimulator.m_DataAccess.Placement.ptaap_LinkedToThis.qAngleTransform, &TempTrace );
 				if( (TempTrace.fraction < pTrace->fraction) )
+				{
+					*pTrace = TempTrace;
+					bCopyBackBrushTraceData = true;
+				}
+			}
+
+			if (bTraceTransformedGeometry && bTraceDisplacements && pLinkedPortalSimulator->m_DataAccess.Simulation.Static.World.Displacements.pCollideable)
+			{
+				physcollision->TraceBox(ray, pLinkedPortalSimulator->m_DataAccess.Simulation.Static.World.Displacements.pCollideable, portalSimulator.m_DataAccess.Placement.ptaap_LinkedToThis.ptOriginTransform, portalSimulator.m_DataAccess.Placement.ptaap_LinkedToThis.qAngleTransform, &TempTrace);
+				if ((TempTrace.fraction < pTrace->fraction))
 				{
 					*pTrace = TempTrace;
 					bCopyBackBrushTraceData = true;
